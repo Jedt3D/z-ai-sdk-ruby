@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+gem 'rspec', '~> 3.13'
+gem 'webmock', '~> 3.24'
+gem 'vcr', '~> 6.3'
+gem 'simplecov', '~> 0.22'
+gem 'simplecov-json', '~> 0.2'
+gem 'factory_bot', '~> 6.5'
+gem 'pry', '~> 0.14'
+
+# Platform-specific debugger
+unless RUBY_PLATFORM == 'java'
+  gem 'pry-byebug', '~> 3.10'
+end

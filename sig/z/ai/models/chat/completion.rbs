@@ -1,0 +1,71 @@
+module Z
+  module AI
+    module Models
+      module Chat
+        module Types
+          include Dry::Types::Module
+        end
+
+        class Message < Dry::Struct
+          attribute role: String
+          attribute content: String | Array[untyped]
+          attribute? name: String?
+          attribute? function_call: Hash[untyped, untyped]?
+          attribute? tool_calls: Array[untyped]?
+
+          def to_h: -> Hash[Symbol, untyped]
+        end
+
+        class Delta < Dry::Struct
+          attribute? role: String?
+          attribute? content: String?
+          attribute? function_call: Hash[untyped, untyped]?
+          attribute? tool_calls: Array[untyped]?
+
+          def to_h: -> Hash[Symbol, untyped]
+        end
+
+        class Choice < Dry::Struct
+          attribute index: Integer
+          attribute message: Message?
+          attribute? delta: Delta?
+          attribute? finish_reason: String?
+
+          def to_h: -> Hash[Symbol, untyped]
+        end
+
+        class Usage < Dry::Struct
+          attribute prompt_tokens: Integer
+          attribute completion_tokens: Integer
+          attribute total_tokens: Integer
+
+          def to_h: -> Hash[Symbol, untyped]
+        end
+
+        class Completion < Dry::Struct
+          attribute id: String
+          attribute object: String
+          attribute created: Integer
+          attribute model: String
+          attribute choices: Array[Choice]
+          attribute? usage: Usage?
+          attribute? system_fingerprint: String?
+
+          def to_h: -> Hash[Symbol, untyped]
+          def content: -> String?
+        end
+
+        class StreamChunk < Dry::Struct
+          attribute id: String
+          attribute object: String
+          attribute created: Integer
+          attribute model: String
+          attribute choices: Array[Choice]
+
+          def to_h: -> Hash[Symbol, untyped]
+          def delta_content: -> String?
+        end
+      end
+    end
+  end
+end

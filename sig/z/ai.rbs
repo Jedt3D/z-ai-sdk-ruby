@@ -1,0 +1,71 @@
+module Z
+  module AI
+    VERSION: String
+
+    class Error < StandardError
+      attr_reader message: String?
+      attr_reader code: String?
+      attr_reader http_status: Integer?
+      attr_reader http_body: String?
+      attr_reader headers: Hash[String, String]
+
+      def initialize: (?message: String?, ?code: String?, ?http_status: Integer?, ?http_body: String?, ?headers: Hash[String, String]?) -> void
+      def to_s: -> String
+    end
+
+    class APIStatusError < Error
+    end
+
+    class APIRequestFailedError < APIStatusError
+    end
+
+    class APIAuthenticationError < APIStatusError
+    end
+
+    class APIConnectionError < APIStatusError
+    end
+
+    class APITimeoutError < APIStatusError
+    end
+
+    class APIResponseError < APIStatusError
+    end
+
+    class APIResourceNotFoundError < APIStatusError
+    end
+
+    class APIRateLimitError < APIStatusError
+    end
+
+    class APIBadRequestError < APIStatusError
+    end
+
+    class ConfigurationError < Error
+    end
+
+    class ValidationError < Error
+    end
+
+    class InvalidRequestError < Error
+    end
+
+    class StreamingError < Error
+    end
+
+    class JWTError < Error
+    end
+
+    class JWTGenerationError < JWTError
+    end
+
+    class JWTExpiredError < JWTError
+    end
+
+    def self?.configuration: -> Configuration
+    def self?.configure: () { (Configuration) -> void } -> void
+    def self?.reset!: -> void
+    def self?.client: -> Client
+    def self?.raise_api_error: (untyped response) -> bot
+    def self?.extract_error_message: (untyped body, Integer status) -> String
+  end
+end

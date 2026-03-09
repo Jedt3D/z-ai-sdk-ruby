@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  ruby-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ruby
+    container_name: zai-ruby-sdk-ruby-test
+    volumes:
+      - ../coverage:/app/coverage
+      - ../tmp:/app/tmp
+    environment:
+      - RUBY_ENV=test
+      - ZAI_API_KEY=${ZAI_API_KEY:-test_key}
+
+  jruby-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jruby
+    container_name: zai-ruby-sdk-jruby-test
+    volumes:
+      - ../coverage:/app/coverage
+      - ../tmp:/app/tmp
+    environment:
+      - RUBY_ENV=test
+      - ZAI_API_KEY=${ZAI_API_KEY:-test_key}
+
+  ruby-interactive:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ruby
+    container_name: zai-ruby-sdk-interactive
+    stdin_open: true
+    tty: true
+    volumes:
+      - ..:/app
+    environment:
+      - RUBY_ENV=development
+      - ZAI_API_KEY=${ZAI_API_KEY:-test_key}
+    entrypoint: /bin/bash

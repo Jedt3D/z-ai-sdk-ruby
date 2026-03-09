@@ -1,0 +1,192 @@
+name: OpenSpec Phase Tagging
+
+on:
+  push:
+    paths:
+      - 'openspec/**'
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      phase_name:
+        description: 'Phase name to tag'
+        required: true
+        default: 'phase'
+      version:
+        description: 'Version suffix (e.g., 1.0, alpha, beta)'
+        required: false
+        default: ''
+
+jobs:
+  detect-and-tag-phase:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+    
+    - name: Install OpenSpec CLI (if exists)
+      run: |
+        if command -v openspec &> /dev/null; then
+          echo "OpenSpec CLI found"
+        else
+          echo "OpenSpec CLI not found, installing..."
+          # Add installation command if available
+          # gem install openspec || echo "OpenSpec CLI installation skipped"
+        fi
+    
+    - name: Check for completed phases
+      id: phases
+      run: |
+        if [ ! -d "openspec/changes" ]; then
+          echo "No openspec/changes directory found"
+          exit 0
+        fi
+        
+        echo "Checking for completed changes..."
+        
+        # Find changes that might be ready for tagging
+        for change_dir in openspec/changes/*/; do
+          if [ -d "$change_dir" ]; then
+            change_name=$(basename "$change_dir")
+            
+            # Check if change has tasks and they're complete
+            if [ -f "$change_dir/tasks.md" ]; then
+              incomplete=$(grep -c "\- \[ \]" "$change_dir/tasks.md" || echo "0")
+              complete=$(grep -c "\- \[x\]" "$change_dir/tasks.md" || echo "0")
+              
+              if [ "$incomplete" -eq 0 ] && [ "$complete" -gt 0 ]; then
+                echo "Found completed change: $change_name ($complete tasks)"
+                echo "$change_name" >> completed_changes.txt
+              fi
+            fi
+          fi
+        done
+        
+        if [ -f "completed_changes.txt" ]; then
+          echo "COMPLETED_CHANGES<<EOF" >> $GITHUB_OUTPUT
+          cat completed_changes.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "No completed changes found"
+        fi
+    
+    - name: Create phase tags
+      if: steps.phases.outputs.COMPLETED_CHANGES != ''
+      run: |
+        echo "Creating tags for completed phases..."
+        
+        # Get current version
+        CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        CURRENT_VERSION=${CURRENT_VERSION#v}
+        
+        # Extract major.minor from current version
+        MAJOR_MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f1,2)
+        
+        IFS=$'\n' read -d '' -r -a changes <<< "${{ steps.phases.outputs.COMPLETED_CHANGES }}"
+        
+        for change in "${changes[@]}"; do
+          if [ -n "$change" ]; then
+            # Sanitize change name for tag
+            sanitized_change=$(echo "$change" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/-$//')
+            
+            # Get next patch version
+            PATCH_VERSION=$(git tag -l "v${MAJOR_MINOR}.*" | sort -V | tail -n1 | cut -d. -f3)
+            if [ -z "$PATCH_VERSION" ]; then
+              PATCH_VERSION=0
+            else
+              PATCH_VERSION=$((PATCH_VERSION + 1))
+            fi
+            
+            VERSION_TAG="v${MAJOR_MINOR}.${PATCH_VERSION}"
+            PHASE_TAG="${sanitized_change}-${VERSION_TAG}"
+            
+            echo "Creating tag: $PHASE_TAG"
+            
+            # Create and push tag
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git tag -a "$PHASE_TAG" -m "Phase completion: $change ($VERSION_TAG)"
+            git push origin "$PHASE_TAG"
+          fi
+        done
+    
+    - name: Manual phase tagging
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        PHASE_NAME="${{ github.event.inputs.phase_name }}"
+        VERSION_SUFFIX="${{ github.event.inputs.version }}"
+        
+        # Sanitize phase name
+        sanitized_phase=$(echo "$PHASE_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/-$//')
+        
+        if [ -n "$VERSION_SUFFIX" ]; then
+          TAG="v${VERSION_SUFFIX}"
+        else
+          # Get current version and increment
+          CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          CURRENT_VERSION=${CURRENT_VERSION#v}
+          MAJOR_MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f1,2)
+          PATCH_VERSION=$(git tag -l "v${MAJOR_MINOR}.*" | sort -V | tail -n1 | cut -d. -f3)
+          if [ -z "$PATCH_VERSION" ]; then
+            PATCH_VERSION=0
+          else
+            PATCH_VERSION=$((PATCH_VERSION + 1))
+          fi
+          TAG="v${MAJOR_MINOR}.${PATCH_VERSION}"
+        fi
+        
+        PHASE_TAG="${sanitized_phase}-${TAG}"
+        
+        echo "Creating manual tag: $PHASE_TAG"
+        
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git tag -a "$PHASE_TAG" -m "Phase completion: $PHASE_NAME ($TAG)"
+        git push origin "$PHASE_TAG"
+    
+    - name: Create phase completion release
+      if: steps.phases.outputs.COMPLETED_CHANGES != ''
+      run: |
+        echo "Creating GitHub releases for completed phases..."
+        
+        IFS=$'\n' read -d '' -r -a changes <<< "${{ steps.phases.outputs.COMPLETED_CHANGES }}"
+        
+        for change in "${changes[@]}"; do
+          if [ -n "$change" ]; then
+            sanitized_change=$(echo "$change" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/-$//')
+            
+            # Find the corresponding tag
+            TAG=$(git tag -l "${sanitized_change}-*" | sort -V | tail -n1)
+            
+            if [ -n "$TAG" ]; then
+              echo "Creating release for tag: $TAG"
+              
+              # Generate release notes from OpenSpec change
+              RELEASE_NOTES="## Phase Completed: $change\n\n"
+              
+              if [ -f "openspec/changes/$change/proposal.md" ]; then
+                RELEASE_NOTES+="### Proposal\n"
+                RELEASE_NOTES+="$(head -50 openspec/changes/$change/proposal.md)\n\n"
+              fi
+              
+              if [ -f "openspec/changes/$change/tasks.md" ]; then
+                RELEASE_NOTES+="### Completed Tasks\n"
+                RELEASE_NOTES+="$(grep -E '^- \[x\]' openspec/changes/$change/tasks.md | sed 's/^- \[x\]/-/' | sed 's/^/  /')\n\n"
+              fi
+              
+              RELEASE_NOTES+="### Source Code\n"
+              RELEASE_NOTES+="This phase is tagged as \`$TAG\` in the repository.\n"
+              
+              # Create GitHub release
+              gh release create "$TAG" --title "Phase Complete: $change" --notes "$RELEASE_NOTES"
+            fi
+          fi
+        done
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

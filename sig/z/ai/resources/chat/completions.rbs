@@ -1,0 +1,24 @@
+module Z
+  module AI
+    module Resources
+      module Chat
+        class Completions < Core::BaseAPI
+          ENDPOINT: String
+
+          def initialize: (Client client) -> void
+          def create: (model: String, messages: Array[untyped], ?stream: bool, **untyped options) -> Models::Chat::Completion
+                                                    | (model: String, messages: Array[untyped], stream: bool, **untyped options) { (Models::Chat::StreamChunk chunk) -> void } -> nil
+          def create_async: (model: String, messages: Array[untyped], **untyped options) -> untyped
+        end
+
+        class StreamIterator
+          include Enumerable[Models::Chat::StreamChunk]
+
+          def initialize: (untyped client, String endpoint, Hash[Symbol, untyped] body) -> void
+          def each: () { (Models::Chat::StreamChunk chunk) -> void } -> void
+                    | () -> Enumerator[Models::Chat::StreamChunk, void]
+        end
+      end
+    end
+  end
+end

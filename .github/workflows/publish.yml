@@ -1,0 +1,110 @@
+name: Publish Gem
+
+on:
+  workflow_call:
+    inputs:
+      gem_name:
+        description: 'Name of the gem'
+        required: false
+        default: 'z-ai-sdk-ruby'
+      rubygems_host:
+        description: 'RubyGems host URL'
+        required: false
+        default: 'https://rubygems.org'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+    
+    - name: Install dependencies
+      run: bundle install
+    
+    - name: Run tests before publishing
+      run: bundle exec rake
+    
+    - name: Extract version from gemspec
+      id: version
+      run: |
+        if [ -f "*.gemspec" ]; then
+          VERSION=$(ruby -e "require 'json'; spec = eval(File.read(Dir.glob('*.gemspec').first)); puts spec.version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Gem version: $VERSION"
+        else
+          echo "No gemspec found"
+          exit 1
+        fi
+    
+    - name: Check if version exists on RubyGems
+      id: check_version
+      run: |
+        GEM_NAME="${{ inputs.gem_name }}"
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        
+        echo "Checking if $GEM_NAME version $VERSION exists on RubyGems..."
+        
+        if curl -s "https://rubygems.org/api/v1/versions/${GEM_NAME}.json" | grep -q "\"version\":\"${VERSION}\""; then
+          echo "Version $VERSION already exists on RubyGems"
+          echo "EXISTS=true" >> $GITHUB_OUTPUT
+        else
+          echo "Version $VERSION not found on RubyGems"
+          echo "EXISTS=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Build gem
+      if: steps.check_version.outputs.EXISTS == 'false'
+      run: |
+        gem build *.gemspec
+        echo "Built gem file:"
+        ls -la *.gem
+    
+    - name: Publish to RubyGems
+      if: steps.check_version.outputs.EXISTS == 'false'
+      env:
+        GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+      run: |
+        gem push *.gem --host "${{ inputs.rubygems_host }}"
+        echo "Published ${{ inputs.gem_name }} version ${{ steps.version.outputs.VERSION }} to RubyGems"
+    
+    - name: Create GitHub Release for gem publication
+      if: steps.check_version.outputs.EXISTS == 'false'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: "v${{ steps.version.outputs.VERSION }}"
+        release_name: "Gem Release v${{ steps.version.outputs.VERSION }}"
+        body: |
+          ## Gem Release v${{ steps.version.outputs.VERSION }}
+          
+          The gem `${{ inputs.gem_name }}` version `${{ steps.version.outputs.VERSION }}` has been published to RubyGems.
+          
+          ### Installation
+          ```bash
+          gem install ${{ inputs.gem_name }} -v ${{ steps.version.outputs.VERSION }}
+          ```
+          
+          ### Usage
+          ```ruby
+          require '${{ inputs.gem_name }}'
+          ```
+          
+          ### Changes
+          See the commit history for details on changes in this version.
+        draft: false
+        prerelease: false
+    
+    - name: Notify if version already exists
+      if: steps.check_version.outputs.EXISTS == 'true'
+      run: |
+        echo "::warning::Version ${{ steps.version.outputs.VERSION }} already exists on RubyGems. Skipping publication."
+        echo "To force publish, delete the existing version first or use a different version number."

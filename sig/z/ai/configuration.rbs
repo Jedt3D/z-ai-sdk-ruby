@@ -1,0 +1,30 @@
+module Z
+  module AI
+    class Configuration
+      attr_accessor api_key: String?
+      attr_accessor base_url: String
+      attr_accessor timeout: Integer
+      attr_accessor open_timeout: Integer
+      attr_accessor read_timeout: Integer
+      attr_accessor write_timeout: Integer
+      attr_accessor max_retries: Integer
+      attr_accessor retry_delay: Integer
+      attr_accessor logger: Logger?
+      attr_accessor log_level: Symbol
+      attr_accessor source_channel: String
+      attr_accessor disable_token_cache: bool
+      attr_accessor custom_headers: Hash[untyped, untyped]
+      attr_accessor proxy_url: String?
+
+      DEFAULT_BASE_URL: String
+      DEFAULT_TIMEOUT: Integer
+      DEFAULT_MAX_RETRIES: Integer
+      DEFAULT_RETRY_DELAY: Integer
+
+      def initialize: -> void
+      def validate!: -> bool
+      def merge: (Configuration other) -> Configuration
+      def to_h: -> Hash[Symbol, untyped]
+    end
+  end
+end

@@ -1,0 +1,20 @@
+module Z
+  module AI
+    class Client < Core::HTTPClient
+      attr_reader config: Configuration
+      attr_reader http_client: Core::HTTPClient
+
+      def initialize: (?api_key: String, ?timeout: Integer, ?max_retries: Integer) -> void
+           | (Configuration config) -> void
+           | (Hash[Symbol, untyped] options) -> void
+      def chat: -> Resources::Chat::Completions
+      def embeddings: -> Resources::Embeddings
+      def images: -> Resources::Images
+      def files: -> Resources::Files
+    end
+
+    class ZhipuClient < Client
+      ZHIPU_BASE_URL: String
+    end
+  end
+end

@@ -1,0 +1,170 @@
+# Z.ai Ruby SDK - Rails Integration
+
+## Installation
+
+1. Add the gem to your Gemfile:
+
+```ruby
+gem 'zai-ruby-sdk'
+```
+
+2. Run the install generator:
+
+```bash
+rails generate z:ai:install
+```
+
+This will create:
+- `config/z_ai.yml` - Configuration file
+- `config/initializers/z_ai.rb` - Initializer
+
+3. Set your API key:
+
+```bash
+# Add to your .env file or environment variables
+export ZAI_API_KEY=your_api_key_here
+```
+
+## Usage
+
+### Basic Usage
+
+```ruby
+# In your controller
+class ChatController < ApplicationController
+  def create
+    response = Z::AI.chat.completions.create(
+      model: 'glm-5',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant' },
+        { role: 'user', content: params[:message] }
+      ]
+    )
+    
+    render json: { response: response.choices.first.message.content }
+  end
+end
+```
+
+### With Background Jobs
+
+```ruby
+# app/jobs/ai_job.rb
+class AiJob < ApplicationJob
+  queue_as :default
+  
+  def perform(prompt, user_id)
+    response = Z::AI.chat.completions.create(
+      model: 'glm-5',
+      messages: [{ role: 'user', content: prompt }]
+    )
+    
+    # Process the response
+    content = response.choices.first.message.content
+    
+    # Update user or send notification
+    User.find(user_id).update(ai_response: content)
+  end
+end
+```
+
+### Streaming in Rails
+
+```ruby
+# app/controllers/stream_controller.rb
+class StreamController < ApplicationController
+  include ActionController::Live
+  
+  def create
+    response.headers['Content-Type'] = 'text/event-stream'
+    
+    Z::AI.chat.completions.create(
+      model: 'glm-5',
+      messages: [{ role: 'user', content: params[:message] }],
+      stream: true
+    ) do |chunk|
+      content = chunk.delta_content
+      if content
+        response.stream.write("data: #{content}\n\n")
+      end
+    end
+    
+  ensure
+    response.stream.close
+  end
+end
+```
+
+### Rails Console Helper
+
+The gem adds a helper method to Rails console:
+
+```ruby
+# In Rails console
+>> zai_client.chat.completions.create(...)
+```
+
+## Configuration
+
+Edit `config/initializers/z_ai.rb` to customize:
+
+```ruby
+Z::AI.configure do |config|
+  config.api_key = ENV['ZAI_API_KEY']
+  config.timeout = 60
+  config.max_retries = 5
+  config.logger = Rails.logger
+  config.log_level = Rails.env.production? ? :info : :debug
+end
+```
+
+## Error Handling
+
+```ruby
+begin
+  response = Z::AI.chat.completions.create(...)
+rescue Z::AI::APIAuthenticationError => e
+  Rails.logger.error "Authentication failed: #{e.message}"
+rescue Z::AI::APIRateLimitError => e
+  Rails.logger.warn "Rate limited, retrying..."
+  retry if retries < 3
+rescue Z::AI::Error => e
+  Rails.logger.error "Z.ai error: #{e.message}"
+end
+```
+
+## Performance Tips
+
+1. **Use background jobs** for long-running requests
+2. **Cache responses** when appropriate
+3. **Use streaming** for better UX
+4. **Monitor with Rails logs** in development
+
+## Testing
+
+In your test environment, use WebMock or VCR:
+
+```ruby
+# spec/rails_helper.rb
+require 'webmock/rspec'
+
+RSpec.configure do |config|
+  config.before(:each) do
+    stub_request(:post, 'https://api.z.ai/api/paas/v4/chat/completions')
+      .to_return(
+        status: 200,
+        body: {
+          id: 'test-id',
+          choices: [{ message: { content: 'Test response' } }]
+        }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+  end
+end
+```
+
+## More Information
+
+- [README.md](../../../README.md) - Full API reference
+- [QUICKSTART.md](../../../QUICKSTART.md) - Getting started guide
+- [examples/](../../../examples/) - Working examples

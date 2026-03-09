@@ -1,0 +1,7 @@
+--format documentation
+--color
+--require spec_helper
+--format progress
+--out /dev/null
+--format documentation
+--out tmp/rspec_results.txt

@@ -1,0 +1,23 @@
+# Z.ai Ruby SDK Configuration
+# =============================
+
+development:
+  api_key: <%= ENV['ZAI_API_KEY'] %>
+  base_url: https://api.z.ai/api/paas/v4/
+  timeout: 60
+  max_retries: 3
+  disable_token_cache: false
+
+test:
+  api_key: <%= ENV['ZAI_API_KEY'] || 'test_key' %>
+  base_url: https://api.z.ai/api/paas/v4/
+  timeout: 30
+  max_retries: 1
+  disable_token_cache: true
+
+production:
+  api_key: <%= ENV['ZAI_API_KEY'] %>
+  base_url: https://api.z.ai/api/paas/v4/
+  timeout: 30
+  max_retries: 5
+  disable_token_cache: false

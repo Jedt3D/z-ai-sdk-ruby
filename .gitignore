@@ -54,3 +54,30 @@ build-iPhoneSimulator/
 
 # Used by RuboCop. Remote config files pulled in from inherit_from directive.
 # .rubocop-https?--*
+
+# OpenSpec folder
+.openspec/
+
+# Common Ruby Gem files
+Gemfile.lock
+.ruby-version
+.ruby-gemset
+.env.local
+.env.development
+.env.test
+.env.production
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing artifacts
+/simplecov/
+/coverage.data
+
+# Rake task output
+/rdoc/
