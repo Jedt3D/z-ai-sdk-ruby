@@ -7,56 +7,95 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  # Phase 1: Fix everything on CRuby 3.4.8 first.
+  # JRuby job will not start until this passes.
+  test-ruby:
+    name: Test (Ruby ${{ matrix.ruby-version }})
     runs-on: ubuntu-latest
-    
+
     strategy:
+      fail-fast: true
       matrix:
-        ruby-version: ['3.2.8', '3.3.0', '3.4.0']
-    
+        ruby-version: ['3.4.8']
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Ruby ${{ matrix.ruby-version }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
-    
+
     - name: Install dependencies
       run: bundle install
-    
+
     - name: Run smoke test
       run: ruby smoke_test.rb
-    
+
     - name: Run verification
       run: ruby verify_sdk.rb
-    
+
     - name: Run tests
       run: bundle exec rake
-    
+
     - name: Run RuboCop
       run: bundle exec rubocop
-    
+
     - name: Check code coverage
       run: bundle exec rake coverage:check
 
-  build:
-    needs: test
+  # Phase 2: Re-test on JRuby only after CRuby is green.
+  test-jruby:
+    name: Test (JRuby ${{ matrix.jruby-version }})
     runs-on: ubuntu-latest
-    
+    needs: test-ruby   # enforces CRuby-first workflow
+
+    strategy:
+      fail-fast: true
+      matrix:
+        jruby-version: ['jruby-10.0.4.0']
+
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Set up JRuby ${{ matrix.jruby-version }}
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.jruby-version }}
+        bundler-cache: true
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Run smoke test
+      run: ruby smoke_test.rb
+
+    - name: Run verification
+      run: ruby verify_sdk.rb
+
+    - name: Run tests
+      run: bundle exec rake
+
+    - name: Run RuboCop
+      run: bundle exec rubocop
+
+  build:
+    needs: [test-ruby, test-jruby]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.2.8'
+        ruby-version: '3.4.8'
         bundler-cache: true
-    
+
     - name: Build gem
       run: gem build *.gemspec
-    
+
     - name: Upload gem artifact
       uses: actions/upload-artifact@v4
       with:
@@ -66,17 +105,16 @@ jobs:
 
   openspec-check:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Check OpenSpec changes
       run: |
         if [ -d "openspec" ]; then
           echo "OpenSpec directory found"
           echo "Checking for changes in openspec/ directory..."
-          
-          # List all OpenSpec changes if they exist
+
           if [ -d "openspec/changes" ]; then
             echo "Active changes:"
             find openspec/changes -maxdepth 1 -type d -not -path "openspec/changes" | while read change; do
