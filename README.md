@@ -24,46 +24,8 @@ $ gem install zai-ruby-sdk
 
 ## Requirements
 
-- Ruby >= 3.2.8
-- JRuby >= 10.0.4.0
-
-## Testing
-
-### Quick Verification
-
-```bash
-# Verify project structure (no dependencies required)
-ruby test_standalone.rb
-
-# Or run smoke test
-ruby smoke_test.rb
-```
-
-### Full Test Suite
-
-**Option 1: Docker Testing (Recommended)**
-```bash
-# Test in both Ruby and JRuby environments
-./test_all_environments.sh docker
-
-# Or test specific environment
-./test_all_environments.sh ruby   # Ruby 3.2.8 only
-./test_all_environments.sh jruby  # JRuby 10.0.4.0 only
-```
-
-**Option 2: Local Testing**
-```bash
-# Install dependencies
-bundle install
-
-# Run RSpec tests
-bundle exec rspec
-
-# With coverage
-COVERAGE=true bundle exec rspec
-```
-
-See [TESTING.md](TESTING.md) for detailed testing instructions.
+- Ruby >= 3.4.8
+- JRuby >= 10.0.4.0 (Ruby 3.4 compatible)
 
 ## Quick Start
 
@@ -151,6 +113,19 @@ response = client.chat.completions.create(
   frequency_penalty: 0.3   # Reduce repetition
 )
 ```
+
+## What Can You Build?
+
+With the Z.ai Ruby SDK you can build:
+
+- **Chatbots & assistants** — conversational AI with multi-turn memory and streaming responses
+- **Content generation tools** — articles, summaries, code reviews, and creative writing
+- **Semantic search systems** — find documents by meaning, not just keywords
+- **Image generation apps** — generate images from text prompts and save them locally
+- **Data processing pipelines** — analyze, classify, and extract information from documents
+- **Rails AI features** — add AI to any web app with initializers, controllers, and background jobs
+
+See the [tutorials/](tutorials/) folder for step-by-step project guides, and [examples/](examples/) for runnable code samples.
 
 ## Features
 
@@ -445,6 +420,30 @@ $ bundle exec rake console
 
 ## Testing
 
+### Quick Verification
+
+```bash
+# Verify project structure (no dependencies required)
+ruby test_standalone.rb
+
+# Or run smoke test
+ruby smoke_test.rb
+```
+
+### Full Test Suite
+
+**Option 1: Docker Testing (Recommended)**
+```bash
+# Test in both Ruby and JRuby environments (Ruby 3.4.8 first, then JRuby)
+./test_all_environments.sh docker
+
+# Or test specific environment
+./test_all_environments.sh ruby   # Ruby 3.4.8 only — fix issues here first
+./test_all_environments.sh jruby  # JRuby 10.0.4.0 only — run after Ruby is green
+```
+
+**Option 2: Local Testing (RSpec)**
+
 The SDK uses RSpec for testing. Run the test suite:
 
 ```bash
@@ -464,15 +463,34 @@ $ bundle exec rake spec_unit
 $ bundle exec rake spec_integration
 ```
 
+See [TESTING.md](TESTING.md) for detailed testing instructions.
+
 ## Examples
 
-Check the `examples/` directory for more usage examples:
+Check the [`examples/`](examples/) directory for runnable code samples. See [`examples/README.md`](examples/README.md) for a full index with difficulty levels and recommended reading order.
 
-- `basic_chat.rb` - Basic chat completion examples
-- `advanced_usage.rb` - Advanced features, error handling, and multimodal chat
-- `embeddings.rb` - Text embeddings, similarity search, and document search
-- `images.rb` - Image generation with various sizes and formats
-- `files.rb` - File upload, management, and lifecycle operations
+- `basic_chat.rb` - Basic chat completion examples _(Beginner)_
+- `advanced_usage.rb` - Error handling, function calling, conversation management _(Intermediate)_
+- `embeddings.rb` - Text embeddings, cosine similarity, document search _(Intermediate)_
+- `images.rb` - Image generation with various sizes and formats _(Beginner)_
+- `files.rb` - File upload, management, and lifecycle operations _(Intermediate)_
+- `streaming_chat_examples.rb` - Real-time streaming patterns _(Intermediate)_
+- `async_programming_examples.rb` - Concurrent API calls _(Advanced)_
+- `batch_processing_examples.rb` - Batch operations _(Advanced)_
+- `error_handling_examples.rb` - Comprehensive error patterns _(Intermediate)_
+- `configuration_examples.rb` - All configuration options _(Beginner)_
+
+## Tutorials
+
+See the [`tutorials/`](tutorials/) folder for step-by-step project guides:
+
+- [`01_first_chat_app.md`](tutorials/01_first_chat_app.md) - Build a CLI chatbot from scratch
+- [`02_semantic_search.md`](tutorials/02_semantic_search.md) - Build document search using embeddings
+- [`03_rails_integration.md`](tutorials/03_rails_integration.md) - Integrate Z.ai into a Rails app
+
+## Troubleshooting
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues including authentication errors, timeouts, rate limiting, and Ruby version problems.
 
 ## Contributing
 
